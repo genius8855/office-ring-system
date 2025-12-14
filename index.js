@@ -6,6 +6,10 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
+app.get("/", (req, res) => {
+  res.send("Backend is running");
+});
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -14,43 +18,49 @@ const io = new Server(server, {
   },
 });
 
-// username -> socketId
 const onlineUsers = {};
 
 io.on("connection", (socket) => {
-  console.log("Connected:", socket.id);
+  console.log("🟢 Socket connected:", socket.id);
 
-  // User registers after socket connect
   socket.on("register", ({ username, role }) => {
-    socket.username = username;
+    console.log("📝 Register event:", username, role);
+
+    const uname = username.trim().toLowerCase();
+    socket.username = uname;
     socket.role = role;
 
-    onlineUsers[username] = socket.id;
+    onlineUsers[uname] = socket.id;
 
-    // Send updated user list to admins
+    console.log("👥 Online users:", Object.keys(onlineUsers));
+
     io.emit("online-users", Object.keys(onlineUsers));
   });
 
-  // Admin rings a user
   socket.on("ring-user", ({ username }) => {
-    const targetSocketId = onlineUsers[username];
-    if (targetSocketId) {
-      io.to(targetSocketId).emit("incoming-ring");
+    console.log("🔔 Ring request for:", username);
+
+    const target = onlineUsers[username];
+    if (target) {
+      io.to(target).emit("incoming-ring");
+      console.log("✅ Ring sent to:", username);
+    } else {
+      console.log("❌ User not found:", username);
     }
   });
 
   socket.on("disconnect", () => {
+    console.log("🔴 Socket disconnected:", socket.id);
+
     if (socket.username) {
       delete onlineUsers[socket.username];
+      console.log("👥 Online users:", Object.keys(onlineUsers));
       io.emit("online-users", Object.keys(onlineUsers));
     }
   });
 });
 
-app.get("/", (req, res) => {
-  res.send("Office Ring System backend is running");
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log("🚀 Server listening on port", PORT);
 });
-
-
-server.listen(process.env.PORT || 3000);
-
