@@ -47,5 +47,10 @@ io.on("connection", (socket) => {
   });
 });
 
+app.get("/", (req, res) => {
+  res.send("Office Ring System backend is running");
+});
+
+
 server.listen(process.env.PORT || 3000);
 
